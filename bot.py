@@ -1,7 +1,16 @@
 import sys
+if sys.platform == 'win32':
+    import asyncio
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 import glob
 import importlib
 from pathlib import Path
+from dotenv import load_dotenv
+load_dotenv()
+import io
+if sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 from pyrogram import Client, idle, __version__
 from pyrogram.raw.all import layer
 import time

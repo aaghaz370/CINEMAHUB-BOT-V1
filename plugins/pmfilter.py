@@ -1520,8 +1520,6 @@ async def cb_handler(client: Client, query: CallbackQuery):
             InlineKeyboardButton('‼️ ᴅɪꜱᴄʟᴀɪᴍᴇʀ ‼️', callback_data='disclaimer'),
             InlineKeyboardButton ('🪔 sᴏᴜʀᴄᴇ', callback_data='source'),
         ],[
-            InlineKeyboardButton('ᴅᴏɴᴀᴛɪᴏɴ 💰', callback_data='donation'),
-        ],[
             InlineKeyboardButton('⇋ ʙᴀᴄᴋ ᴛᴏ ʜᴏᴍᴇ ⇋', callback_data='start')
         ]]
         reply_markup = InlineKeyboardMarkup(buttons)
@@ -1568,7 +1566,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
 
     elif query.data == "source":
         buttons = [[
-            InlineKeyboardButton('Source Code 📜', url='https://t.me/royalkrrishna'),
+            InlineKeyboardButton('Source Code 📜', url=OWNER_LNK),
             InlineKeyboardButton('⇋ ʙᴀᴄᴋ ⇋', callback_data='about')
         ]]
         reply_markup = InlineKeyboardMarkup(buttons)
@@ -1762,15 +1760,6 @@ async def auto_filter(client, msg, spoll=False):
                 message_text = message.text or ""
                 search = message_text.lower()
 
-                stick_id = "CAACAgIAAxkBAAEPhm5o439f8A4sUGO2VcnBFZRRYxAxmQACtCMAAphLKUjeub7NKlvk2TYE"
-                keyboard = InlineKeyboardMarkup(
-                    [[InlineKeyboardButton(f'🔎 sᴇᴀʀᴄʜɪɴɢ {search}', callback_data="hiding")]]
-                )
-                try:
-                    m = await message.reply_sticker(sticker=stick_id, reply_markup=keyboard)
-                except Exception as e:
-                    logger.exception("reply_sticker failed: %s", e)
-
                 find = search.split(" ")
                 search = ""
                 removes = ["in", "upload", "series", "full",
@@ -1790,7 +1779,7 @@ async def auto_filter(client, msg, spoll=False):
                 settings = await get_settings(message.chat.id)
                 if not files:
                     if settings.get("spell_check"):
-                        ai_sts = await m.edit('🤖 ᴘʟᴇᴀꜱᴇ ᴡᴀɪᴛ, ᴀɪ ɪꜱ ᴄʜᴇᴄᴋɪɴɢ ʏᴏᴜʀ ꜱᴘᴇʟʟɪɴɢ...')
+                        ai_sts = await message.reply_text('🤖 ᴘʟᴇᴀꜱᴇ ᴡᴀɪᴛ, ᴀɪ ɪꜱ ᴄʜᴇᴄᴋɪɴɢ ʏᴏᴜʀ ꜱᴘᴇʟʟɪɴɢ...')
                         is_misspelled = await ai_spell_check(chat_id=message.chat.id, wrong_name=search)
 
                         if is_misspelled:
@@ -1815,7 +1804,6 @@ async def auto_filter(client, msg, spoll=False):
             # spoll branch
             message = msg.message.reply_to_message
             search, files, offset, total_results = spoll
-            m = await message.reply_text(f'🔎 sᴇᴀʀᴄʜɪɴɢ {search}', reply_to_message_id=message.id)
             settings = await get_settings(message.chat.id)
             await msg.message.delete()
 
@@ -1900,7 +1888,7 @@ async def auto_filter(client, msg, spoll=False):
                 text="↭ ɴᴏ ᴍᴏʀᴇ ᴘᴀɢᴇꜱ ᴀᴠᴀɪʟᴀʙʟᴇ ↭", callback_data="pages")])
 
         if settings.get('imdb'):
-            imdb = await get_posterx(search, file=(files[0]).file_name) if TMDB_POSTERS else await get_poster(search, file=(files[0]).file_name)
+            imdb = await get_posterx(search, file=(files[0]).file_name) if TMDB_ON_SEARCH else await get_poster(search, file=(files[0]).file_name)
         else:
             imdb = None
 
@@ -2014,22 +2002,74 @@ async def auto_filter(client, msg, spoll=False):
         return
 
 async def ai_spell_check(chat_id, wrong_name):
-    async def search_movie(wrong_name):
+    """
+    3-layer fuzzy spell correction:
+    Layer 1: DB-first fuzzy — fetch candidate file names from DB using
+             a flexible regex, then fuzzy-score them locally with fuzzywuzzy.
+             This is fast and uses YOUR actual data (handles "ashrm" → "Aashram").
+    Layer 2: IMDB title match (original logic) — for cases not in DB.
+    Layer 3: Fallback to None.
+    """
+    wrong_lower = wrong_name.strip().lower()
+
+    # ── Layer 1: DB fuzzy ────────────────────────────────────────────────
+    try:
+        # Build a loose "any chr present" regex from the typed letters
+        # e.g. "ashrm" → a.*s.*h.*r.*m  (very permissive)
+        loose_pattern = ".*".join(re.escape(c) for c in wrong_lower if c.strip())
+        regex = re.compile(loose_pattern, re.IGNORECASE)
+        filter_mongo = {"file_name": regex}
+
+        # Pull up to 200 candidate filenames from DB
+        candidates_raw = await Media.find(filter_mongo).limit(200).to_list(length=200)
+        if MULTIPLE_DB:
+            extra = await Media2.find(filter_mongo).limit(200).to_list(length=200)
+            candidates_raw.extend(extra)
+
+        if candidates_raw:
+            # Extract clean titles (first 1-3 words before resolution/season markers)
+            title_set = set()
+            for doc in candidates_raw:
+                fname = getattr(doc, "file_name", "")
+                # grab first part before common separators/quality markers
+                clean = re.split(r'[\.\-_\[\(]|\b(720p|1080p|480p|2160p|4k|S\d{2}|E\d{2}|HEVC|BluRay|WEB)\b',
+                                  fname, flags=re.IGNORECASE)[0].strip()
+                if clean:
+                    title_set.add(clean)
+
+            if title_set:
+                best = process.extractOne(wrong_lower, list(title_set),
+                                          score_cutoff=55)  # lower threshold = more forgiving
+                if best:
+                    matched_title = best[0]
+                    # Verify this title actually returns files from the DB
+                    first_word = matched_title.split()[0] if matched_title else ""
+                    if first_word:
+                        files, _, _ = await get_search_results(chat_id=chat_id, query=first_word)
+                        if files:
+                            return first_word
+    except Exception as e:
+        logger.warning(f"DB fuzzy layer failed: {e}")
+
+    # ── Layer 2: IMDB match (original logic) ─────────────────────────────
+    try:
         search_results = imdb.search_movie(wrong_name)
         movie_list = [movie['title'] for movie in search_results]
-        return movie_list
-    movie_list = await search_movie(wrong_name)
-    if not movie_list:
-        return
-    for _ in range(5):
-        closest_match = process.extractOne(wrong_name, movie_list)
-        if not closest_match or closest_match[1] <= 80:
-            return
-        movie = closest_match[0]
-        files, _, _ = await get_search_results(chat_id=chat_id, query=movie)
-        if files:
-            return movie
-        movie_list.remove(movie)
+        if movie_list:
+            for _ in range(5):
+                closest_match = process.extractOne(wrong_name, movie_list)
+                if not closest_match or closest_match[1] <= 80:
+                    break
+                movie = closest_match[0]
+                files, _, _ = await get_search_results(chat_id=chat_id, query=movie)
+                if files:
+                    return movie
+                movie_list.remove(movie)
+    except Exception as e:
+        logger.warning(f"IMDB spell-check layer failed: {e}")
+
+    return None
+
 
 
 async def advantage_spell_chok(client, message):

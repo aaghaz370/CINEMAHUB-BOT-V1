@@ -114,8 +114,19 @@ async def send_system_info(client, message):
 
 @Client.on_message(filters.command("commands") & filters.user(ADMINS))
 async def set_commands(client, message):
-    commands = [BotCommand(cmd, desc) for cmd, desc in Bot_cmds.items()]
-    await client.set_bot_commands(commands)
+    from pyrogram.types import BotCommandScopeDefault, BotCommandScopeChat
+    from info import Admin_cmds
+
+    user_commands = [BotCommand(cmd, desc) for cmd, desc in Bot_cmds.items()]
+    await client.set_bot_commands(user_commands, scope=BotCommandScopeDefault())
+    
+    admin_commands = [BotCommand(cmd, desc) for cmd, desc in Admin_cmds.items()]
+    for admin_id in ADMINS:
+        try:
+            await client.set_bot_commands(user_commands + admin_commands, scope=BotCommandScopeChat(admin_id))
+        except Exception as e:
+            logging.error(f"Failed to set admin commands for {admin_id}: {e}")
+
     bot_set = await message.reply("ʙᴏᴛ ᴄᴏᴍᴍᴀɴᴅs ᴜᴘᴅᴀᴛᴇᴅ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ✅ ")
     await asyncio.sleep(119)  
     await bot_set.delete()

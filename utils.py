@@ -383,10 +383,19 @@ async def get_shortlink(link, grp_id, is_second_shortener=False, is_third_shorte
             api, site = settings['api'], settings['shortner']
     shortzy = Shortzy(api, site)
     try:
-        link = await shortzy.convert(link)
-    except Exception as e:
-        link = await shortzy.get_quick_link(link)
-    return link
+        shortened = await shortzy.convert(link)
+    except Exception:
+        try:
+            shortened = await shortzy.get_quick_link(link)
+        except Exception:
+            shortened = link
+
+    # Validate the shortened URL — if it's empty, not a proper URL, fall back to original
+    if not shortened or not str(shortened).startswith("http"):
+        logger.warning(f"Shortener returned invalid URL: {shortened!r} — using original link")
+        return link
+    return shortened
+
 
 async def get_settings(group_id):
     settings = temp.SETTINGS.get(group_id)

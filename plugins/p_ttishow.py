@@ -159,32 +159,60 @@ async def re_enable_chat(bot, message):
 @Client.on_message(filters.command('stats') & filters.user(ADMINS))
 async def get_stats(bot, message):
     try:
-        msg = await message.reply('ᴀᴄᴄᴇꜱꜱɪɴɢ ꜱᴛᴀᴛᴜꜱ ᴅᴇᴛᴀɪʟꜱ...')
+        msg = await message.reply('<b>📊 ɢᴀᴛʜᴇʀɪɴɢ sᴛᴀᴛs, ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ...</b>')
+
+        # User & group data
         total_users = await db.total_users_count()
-        totl_chats = await db.total_chat_count()
+        total_chats = await db.total_chat_count()
         premium = await db.all_premium_users()
+        banned_users, banned_chats = await db.get_banned()
+        banned_users_count = len(banned_users)
+        banned_chats_count = len(banned_chats)
+
+        # File data
         file1 = await Media.count_documents()
-        DB_SIZE = 512 * 1024 * 1024
+
+        # DB size (MongoDB Atlas free = 512 MB cap)
+        DB_SIZE_CAP = 512 * 1024 * 1024
         dbstats = await db_stats.command("dbStats")
         db_size = dbstats['dataSize'] + dbstats['indexSize']
-        free = DB_SIZE - db_size
+        db_free = max(DB_SIZE_CAP - db_size, 0)
+        db_usage_pct = round((db_size / DB_SIZE_CAP) * 100, 1)
+
+        # Bot uptime
         uptime = get_readable_time(time() - botStartTime)
+
+        # System: RAM, CPU
         ram = psutil.virtual_memory().percent
-        cpu = psutil.cpu_percent()
+        cpu = psutil.cpu_percent(interval=0.5)
+
+        # Disk
+        disk = psutil.disk_usage('/')
+        disk_used = get_size(disk.used)
+        disk_total = get_size(disk.total)
+
         if MULTIPLE_DB == False:
             await msg.edit(script.STATUS_TXT.format(
-                total_users, totl_chats, premium, file1, get_size(db_size), get_size(free), uptime, ram, cpu))                                               
+                total_users, total_chats, premium,
+                banned_users_count, banned_chats_count,
+                file1,
+                get_size(db_size), get_size(db_free), db_usage_pct,
+                uptime, ram, cpu,
+                disk_used, disk_total
+            ))
             return
+
+        # Multi-DB path (unchanged logic)
         file2 = await Media2.count_documents()
         db2stats = await db2_stats.command("dbStats")
         db2_size = db2stats['dataSize'] + db2stats['indexSize']
-        free2 = DB_SIZE - db2_size
+        free2 = DB_SIZE_CAP - db2_size
         await msg.edit(script.MULTI_STATUS_TXT.format(
-            total_users, totl_chats, premium, file1, get_size(db_size), get_size(free),
+            total_users, total_chats, premium, file1, get_size(db_size), get_size(db_free),
             file2, get_size(db2_size), get_size(free2), uptime, ram, cpu, (int(file1) + int(file2))
-            ))
+        ))
     except Exception as e:
-       print(f"Error In stats :- {e}")        
+        print(f"Error In stats :- {e}")
 
 @Client.on_message(filters.command('invite') & filters.user(ADMINS))
 async def gen_invite(bot, message):
