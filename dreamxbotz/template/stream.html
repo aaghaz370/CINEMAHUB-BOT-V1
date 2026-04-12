@@ -119,9 +119,10 @@
         .player-outer video { width:100%; aspect-ratio:16/9; display:block; background:#000; object-fit:contain; }
         .player-outer.fill-mode .plyr__video-wrapper video { object-fit:cover !important; }
 
-        /* Plyr colors — only accent, functional controls untouched */
-        .plyr--video { aspect-ratio:16/9; width:100%; background:#000; }
-        .plyr__video-wrapper { aspect-ratio:16/9; background:#000; }
+        /* Player strict background to block website theme bleeding */
+        .player-outer { background: #000 !important; }
+        .plyr--video { aspect-ratio:16/9; width:100%; background:#000 !important; --plyr-video-background: #000 !important; }
+        .plyr__video-wrapper { aspect-ratio:16/9; background:#000 !important; }
         .plyr--video .plyr__control--overlaid { background:var(--ch-red)!important; }
         .plyr--video .plyr__control--overlaid:hover { background:#b20810!important; }
         .plyr__control.plyr__tab-focus,
@@ -432,6 +433,60 @@
         .fade-in { opacity:0; transform:translateY(18px); transition:all 0.65s ease; }
         .fade-in.visible { opacity:1; transform:translateY(0); }
 
+        /* ── Premium Modal ── */
+        .modal-overlay {
+            position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(8px);
+            z-index:9000; display:flex; align-items:center; justify-content:center;
+            opacity:0; visibility:hidden; transition:all 0.3s ease; padding:1.2rem;
+        }
+        .modal-overlay.show { opacity:1; visibility:visible; }
+        .modal-content {
+            background:#0f1015; border:1px solid var(--glass-border); border-radius:24px;
+            width:100%; max-width:400px; padding:2rem; position:relative;
+            box-shadow:0 30px 60px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05);
+            transform:translateY(25px) scale(0.95); transition:all 0.4s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        .modal-overlay.show .modal-content { transform:translateY(0) scale(1); }
+        .modal-close {
+            position:absolute; top:1.2rem; right:1.2rem; width:32px; height:32px; border-radius:50%;
+            background:rgba(255,255,255,0.05); color:var(--text-white); border:none; cursor:pointer;
+            display:flex; align-items:center; justify-content:center; font-size:1rem; transition:0.2s;
+        }
+        .modal-close:hover { background:var(--ch-red); transform:rotate(90deg); }
+        .modal-header { text-align:center; margin-bottom:1.5rem; }
+        .modal-icon {
+            width:56px; height:56px; border-radius:18px; margin:0 auto 1rem; display:flex; align-items:center; justify-content:center;
+            font-size:1.6rem; background:rgba(245,197,24,0.15); color:var(--ch-gold);
+            box-shadow:0 0 20px rgba(245,197,24,0.2);
+        }
+        .modal-header h3 { font-family:'Space Grotesk',sans-serif; font-size:1.5rem; font-weight:800; margin-bottom:0.25rem; }
+        .modal-header p { font-size:0.85rem; color:var(--text-muted); }
+        .plans-list { display:flex; flex-direction:column; gap:0.6rem; margin-bottom:1.5rem; }
+        .plan-item {
+            display:flex; justify-content:space-between; align-items:center;
+            padding:1rem 1.2rem; border-radius:14px; background:rgba(255,255,255,0.02);
+            border:1px solid rgba(255,255,255,0.04); position:relative; overflow:hidden;
+        }
+        .plan-item:hover { background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.08); }
+        .plan-item.hit { border-color:var(--ch-purple); background:rgba(147,51,234,0.06); }
+        .plan-item.hit2 { border-color:var(--ch-gold); background:rgba(245,197,24,0.06); }
+        .plan-price { font-family:'Space Grotesk',sans-serif; font-size:1.2rem; font-weight:700; color:#fff; }
+        .plan-price span { font-size:0.8rem; color:var(--text-muted); font-weight:500; font-family:'Outfit',sans-serif; }
+        .plan-features { font-size:0.8rem; font-weight:600; color:var(--text-white); }
+        .plan-badge {
+            position:absolute; top:0; right:0; background:var(--ch-purple); color:#fff;
+            font-size:0.56rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;
+            padding:0.2rem 0.6rem; border-radius:0 14px 0 10px;
+        }
+        .plan-badge.bg-gold { background:var(--ch-gold); color:#000; }
+        .buy-btn {
+            display:flex; align-items:center; justify-content:center; gap:0.5rem; width:100%;
+            padding:0.9rem; border-radius:12px; background:linear-gradient(135deg, var(--ch-red), #9b1010);
+            color:#fff; font-size:0.95rem; font-weight:700; text-decoration:none;
+            box-shadow:0 8px 25px rgba(229,9,20,0.3); transition:all 0.2s;
+        }
+        .buy-btn:hover { box-shadow:0 12px 30px rgba(229,9,20,0.45); transform:translateY(-2px); }
+
         /* ── Responsive ── */
         @media (max-width: 768px) {
             .header { padding:0.75rem 1rem; }
@@ -667,7 +722,7 @@
                 <h3>Go Premium</h3>
                 <p>Unlock unlimited streams, faster servers, exclusive content and priority support. From ₹20 only.</p>
                 <div class="card-links">
-                    <a href="https://t.me/rolexsir_8" class="card-link">View Plans <i class="fas fa-chevron-right"></i></a>
+                    <a href="#" class="card-link" onclick="openPremiumModal(); return false;">View Plans <i class="fas fa-chevron-right"></i></a>
                 </div>
             </div>
         </div>
@@ -675,8 +730,47 @@
 </div>
 
 <footer class="footer">
-    <p>© 2025 <a href="https://t.me/Univora88">CinemaHub</a>. Premium Telegram Streaming. All Rights Reserved.</p>
+    <p>© 2026 CinemaHub by <a href="https://t.me/rolexsir_8">Rolex Sir</a>.</p>
+    <p style="margin-top:0.4rem;font-size:0.85rem;">A product of <a href="https://univora.site" target="_blank" style="color:var(--ch-gold);font-weight:700">Univora Platform</a></p>
+    <p style="margin-top:0.5rem;font-size:0.75rem;color:var(--text-muted)">Premium Telegram Streaming. All Rights Reserved.</p>
 </footer>
+
+<!-- Premium Modal -->
+<div class="modal-overlay" id="premiumModal" onclick="closePremiumModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <button class="modal-close" onclick="closePremiumModal()"><i class="fas fa-times"></i></button>
+        <div class="modal-header">
+            <div class="modal-icon"><i class="fas fa-crown"></i></div>
+            <h3>CinemaHub Premium</h3>
+            <p>High-speed, zero waiting, and premium support</p>
+        </div>
+        <div class="plans-list">
+            <div class="plan-item">
+                <div class="plan-price">₹20 <span>/ 7 Days</span></div>
+                <div class="plan-features">Starter</div>
+            </div>
+            <div class="plan-item hit">
+                <div class="plan-badge">Popular</div>
+                <div class="plan-price">₹40 <span>/ 15 Days</span></div>
+                <div class="plan-features">Standard</div>
+            </div>
+            <div class="plan-item">
+                <div class="plan-price">₹80 <span>/ 1 Month</span></div>
+                <div class="plan-features">Pro Plan</div>
+            </div>
+            <div class="plan-item">
+                <div class="plan-price">₹110 <span>/ 45 Days</span></div>
+                <div class="plan-features">Ultra</div>
+            </div>
+            <div class="plan-item hit2">
+                <div class="plan-badge bg-gold">Best Value</div>
+                <div class="plan-price">₹130 <span>/ 60 Days</span></div>
+                <div class="plan-features">Max Plan</div>
+            </div>
+        </div>
+        <a href="https://t.me/rolexsir_8" class="buy-btn" target="_blank"><i class="fab fa-telegram-plane"></i> Contact @rolexsir_8</a>
+    </div>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
@@ -841,6 +935,17 @@
     function hd_player()     { window.location.href = `intent:${FILE_URL}#Intent;package=uplayer.video.player;end`; }
     // System chooser — lets Android show all available video apps
     function system_player() { window.location.href = `intent:${FILE_URL}#Intent;action=android.intent.action.VIEW;type=video/*;end`; }
+
+    // ── Premium Modal ──
+    const pModal = document.getElementById('premiumModal');
+    function openPremiumModal() {
+        pModal.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+    function closePremiumModal() {
+        pModal.classList.remove('show');
+        document.body.style.overflow = '';
+    }
 
     // ── Hide mobile-only buttons on desktop ──
     const isDesktop = window.innerWidth > 768;
