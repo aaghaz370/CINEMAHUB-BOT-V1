@@ -117,7 +117,7 @@
 
         /* Fit mode default */
         .player-outer video { width:100%; aspect-ratio:16/9; display:block; background:#000; object-fit:contain; }
-        .player-outer.fill-mode video { object-fit:cover; }
+        .player-outer.fill-mode .plyr__video-wrapper video { object-fit:cover !important; }
 
         /* Plyr colors — only accent, functional controls untouched */
         .plyr--video { aspect-ratio:16/9; width:100%; background:#000; }
@@ -447,7 +447,8 @@
             .desktop-players { display:none !important; }
             .mobile-players { display:block !important; }
             .mobile-players-grid { grid-template-columns:repeat(4, 1fr); }
-            .more-dropdown { right:auto; left:0; width:240px; }
+            /* Hide volume on mobile to free up space for the timeline */
+            .plyr__volume { display:none !important; }
         }
 
         @media (min-width: 769px) {
@@ -505,23 +506,7 @@
                     <button class="btn btn-dl" onclick="blazeDownload()">
                         <i class="fas fa-download"></i> Download
                     </button>
-                    <!-- More dropdown -->
-                    <div class="more-wrap">
-                        <button class="btn btn-ghost" id="moreBtn" onclick="toggleMore()">
-                            <i class="fas fa-ellipsis-h"></i> More
-                        </button>
-                        <div class="more-dropdown" id="moreDropdown">
-                            <div class="more-dropdown-title">More Players</div>
-                            <div class="more-grid">
-                                <a href="#" class="more-item" onclick="playit_player();return false;"><img src="https://i.postimg.cc/RVGWYJFF/playit.png" alt="PLAYit"> PLAYit</a>
-                                <a href="#" class="more-item" onclick="km_player();return false;"><img src="https://i.postimg.cc/wT9tFQ9Z/km.png" alt="KM"> KMPlayer</a>
-                                <a href="#" class="more-item" onclick="s_player();return false;"><img src="https://i.postimg.cc/XYJr6NGg/s.png" alt="S Player"> S Player</a>
-                                <a href="#" class="more-item" onclick="hd_player();return false;"><img src="https://i.postimg.cc/rFT43LNh/hd.png" alt="HD"> HD Player</a>
-                                <a href="#" class="more-item" onclick="mx_playerpro();return false;"><img src="https://i.postimg.cc/sx4Msv4T/mx.png" alt="MX Pro"> MX Pro</a>
-                                <a href="#" class="more-item" onclick="copyLink();return false;"><i class="fas fa-link" style="width:20px;text-align:center;color:var(--ch-cyan);font-size:0.9rem"></i> Copy URL</a>
-                            </div>
-                        </div>
-                    </div>
+                    <!-- More dropdown was removed here -->
                 </div>
             </div>
 
