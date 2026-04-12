@@ -1637,7 +1637,7 @@
         // ── Typewriter ──
         (() => {
             const el = document.getElementById('typewriter-el');
-            const text = '{{file_name}}';
+            const text = {{ file_name | tojson }};
             let i = 0;
             function type() {
                 if (i < text.length) {
@@ -1751,7 +1751,7 @@
         function blazeDownload() {
             const a = document.createElement('a');
             a.href = FILE_URL + '?download=true';
-            a.download = '{{file_name}}';
+            a.download = {{ file_name | tojson }};
             a.click();
             notify('⬇️ Download started!');
         }
