@@ -203,10 +203,19 @@
             width: 100%;
             aspect-ratio: 16/9;
             display: block;
-            object-fit: contain;
+            background: #000;
         }
 
         /* ─── Plyr theme tweaks (keep player functional, only colors) ─── */
+        .plyr--video {
+            aspect-ratio: 16/9;
+            width: 100%;
+            background: #000;
+        }
+        .plyr__video-wrapper {
+            aspect-ratio: 16/9;
+            background: #000;
+        }
         .plyr--video .plyr__control--overlaid {
             background: var(--ch-red) !important;
         }
@@ -749,7 +758,7 @@
 <div class="main">
 
     <!-- PLAYER -->
-    <section id="player-section" class="player-section fade-in">
+    <section id="player-section" class="player-section">
         <div class="player-wrap">
             <video id="player" playsinline controls data-poster="https://envs.sh/34_.jpg">
                 <source src="{{file_url}}" type="video/mp4" />
