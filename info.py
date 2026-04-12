@@ -241,8 +241,13 @@ else:
         URL = "http://{}:{}/".format(FQDN, PORT)
 
 # Fallback handling: If URL looks like an IP but RENDER_EXTERNAL_URL exists, prefer Render
-if FQDN == BIND_ADRESS and RENDER_EXTERNAL_URL:
+if (not FQDN or FQDN == BIND_ADRESS) and RENDER_EXTERNAL_URL:
     URL = RENDER_EXTERNAL_URL if RENDER_EXTERNAL_URL.endswith("/") else RENDER_EXTERNAL_URL + "/"
+    FQDN = URL.replace("https://", "").replace("http://", "").rstrip("/")
+
+# Final Master Override: If user sets URL env var, use it.
+if getenv('URL'):
+    URL = getenv('URL') if getenv('URL').endswith("/") else getenv('URL') + "/"
 
 SLEEP_THRESHOLD = int(environ.get('SLEEP_THRESHOLD', '60'))
 WORKERS = int(environ.get('WORKERS', '4'))
