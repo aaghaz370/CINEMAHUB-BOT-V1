@@ -132,7 +132,10 @@ async def media_streamer(request: web.Request, id: int, secure_hash: str):
 
     mime_type = file_id.mime_type
     file_name = file_id.file_name
-    disposition = "attachment"
+    if request.rel_url.query.get("download"):
+        disposition = "attachment"
+    else:
+        disposition = "inline"
 
     if mime_type:
         if not file_name:

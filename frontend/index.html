@@ -25,9 +25,10 @@
     <script>
       // Jinja payload injected by the streaming server
       window.__PRELOADED_STATE__ = {% if file_name %}{
-        file_name: "{{file_name|safe}}",
-        direct_dl_link: "{{file_url|safe}}",
-        file_size: "{{file_size|safe}}"
+        file_name: `{{file_name}}`,
+        direct_dl_link: `{{file_url}}`,
+        file_size: `{{file_size}}`,
+        vlc_player_link_pc: `vlc://{{file_url}}`
       }{% else %}null{% endif %};
     </script>
 
