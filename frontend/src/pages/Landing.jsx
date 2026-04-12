@@ -194,13 +194,23 @@ export default function Landing() {
           {/* Shine effect */}
           <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-bl from-yellow-500/5 to-transparent pointer-events-none"></div>
 
-          <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16 relative z-10">
-            <div className="flex-1 w-full text-center lg:text-left order-1">
+          <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16 relative z-10">
+            
+            {/* Mobile Card (Simplified & Stable) */}
+            <div className="block lg:hidden w-full mb-8">
+               <div className="bg-gradient-to-br from-[#1a1a17] to-[#0d0d0c] border border-yellow-500/30 rounded-3xl p-6 shadow-2xl flex flex-col items-center justify-center text-center">
+                  <Crown className="w-12 h-12 text-yellow-500 mb-3" />
+                  <h4 className="text-xl font-black text-white mb-1">Max Plan</h4>
+                  <p className="text-gray-400 text-xs">60 Days of absolute power.</p>
+               </div>
+            </div>
+
+            <div className="flex-1 w-full text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1 md:py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 text-[10px] md:text-xs font-bold uppercase tracking-wider mb-4 md:mb-6">
                  <Crown size={12} className="md:w-3.5 md:h-3.5"/> CinemaHub Premium
               </div>
               <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight mb-4 md:mb-6 text-white text-balance">Upgrade Your Arsenal.</h2>
-              <ul className="space-y-4 mb-8 md:mb-10 text-left">
+              <ul className="space-y-4 mb-8 md:mb-10 text-left mx-auto lg:mx-0 max-w-sm lg:max-w-none">
                 {[
                   "Direct Browser Download (High Speed)",
                   "Zero Banner & Pop-Up Ads",
@@ -208,8 +218,8 @@ export default function Landing() {
                   "Advanced Sleep Timers & UI",
                 ].map((ft, i) => (
                   <li key={i} className="flex items-center gap-3 text-gray-300 font-medium text-sm md:text-base">
-                    <div className="w-6 h-6 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0">
-                       <CheckCircle2 size={12} className="text-yellow-500 scale-110" />
+                    <div className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0">
+                       <CheckCircle2 size={10} className="text-yellow-500 md:scale-110" />
                     </div>
                     {ft}
                   </li>
@@ -221,16 +231,18 @@ export default function Landing() {
               </a>
             </div>
 
-            <div className="flex-1 w-full lg:w-auto relative flex items-center justify-center order-2 lg:order-2 mt-8 lg:mt-0">
-               <div className="relative w-64 h-64 md:w-72 md:h-72 flex items-center justify-center">
-                  <div className="absolute inset-0 bg-yellow-500/5 backdrop-blur-md border border-yellow-500/20 rounded-[2.5rem] transform rotate-6 animate-pulse invisible md:visible"></div>
-                  <div className="relative w-full h-full bg-gradient-to-br from-[#1a1a17] to-[#0d0d0c] border border-yellow-500/30 rounded-[2.5rem] transform rotate-[-2deg] md:rotate-[-3deg] p-8 shadow-2xl flex flex-col justify-center items-center text-center">
+            {/* Desktop Card (Premium Aesthetic) */}
+            <div className="hidden lg:flex flex-1 w-full lg:w-auto relative items-center justify-center">
+               <div className="relative w-72 h-72 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-yellow-500/5 backdrop-blur-md border border-yellow-500/20 rounded-[2.5rem] transform rotate-6 animate-pulse"></div>
+                  <div className="relative w-full h-full bg-gradient-to-br from-[#1a1a17] to-[#0d0d0c] border border-yellow-500/30 rounded-[2.5rem] transform rotate-[-3deg] p-8 shadow-2xl flex flex-col justify-center items-center text-center">
                      <Crown className="w-16 h-16 text-yellow-500 mb-4" />
-                     <h4 className="text-2xl md:text-3xl font-black text-white mb-2">Max Plan</h4>
-                     <p className="text-gray-400 text-sm md:text-base">60 Days of absolute power.</p>
+                     <h4 className="text-3xl font-black text-white mb-2">Max Plan</h4>
+                     <p className="text-gray-400 text-base">60 Days of absolute power.</p>
                   </div>
                </div>
             </div>
+
           </div>
         </div>
       </section>
