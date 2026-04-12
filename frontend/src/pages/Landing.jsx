@@ -195,7 +195,7 @@ export default function Landing() {
           <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-bl from-yellow-500/5 to-transparent pointer-events-none"></div>
 
           <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12 relative z-10">
-            <div className="flex-1 w-full relative h-[180px] md:h-[300px] flex md:hidden mb-4 items-center justify-center">
+            <div className="flex-1 w-full relative h-[260px] md:h-[300px] flex md:hidden mb-8 items-center justify-center">
                <div className="absolute top-0 right-1/2 translate-x-1/2 md:translate-x-0 md:top-10 md:right-20 w-48 h-48 md:w-64 md:h-64 bg-yellow-500/5 backdrop-blur-md border border-yellow-500/20 rounded-3xl transform rotate-3 md:rotate-6 animate-pulse"></div>
                <div className="absolute top-4 right-1/2 translate-x-1/2 md:translate-x-0 md:top-0 md:right-10 w-48 h-48 md:w-64 md:h-64 bg-gradient-to-br from-[#1a1a17] to-[#0d0d0c] border border-yellow-500/30 rounded-3xl transform -rotate-2 md:-rotate-3 p-4 md:p-6 shadow-2xl flex flex-col justify-center items-center text-center">
                   <Crown className="w-10 h-10 md:w-16 md:h-16 text-yellow-500 mb-3 md:mb-4" />
