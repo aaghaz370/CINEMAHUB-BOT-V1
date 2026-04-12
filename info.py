@@ -281,7 +281,12 @@ Admin_cmds = {
     "restart": "ʀᴇꜱᴛᴀʀᴛ ᴛʜᴇ ʙᴏᴛ.",
     "admin_cmd": "ᴀᴅᴍɪɴ ᴄᴏᴍᴍᴀɴᴅs ʟɪsᴛ.",
     "reset_group": "Group Setting Default",
-    "trial_reset": "User Trial Reset"
+    "trial_reset": "User Trial Reset",
+    "global_shortener": "Global Shortener On/Off",
+    "glist": "Sᴀʙ ɢʀᴏᴜᴘs ᴋɪ ʟɪsᴛ ᴀᴜʀ ᴘᴀɴᴇʟ",
+    "ginfo": "Specific group control panel",
+    "gverify": "Verify on/off (Admin command)",
+    "admin_cmd": "Admin commands list"
 }
 
 

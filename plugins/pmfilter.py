@@ -1017,9 +1017,9 @@ async def cb_handler(client: Client, query: CallbackQuery):
         await query.answer(url=f"href='https://telegram.me/{temp.U_NAME}?start=file_{query.message.chat.id}_{file.file_id}")
 
     elif query.data.startswith("autofilter_delete"):
-        await Media.collection.drop()
-        if MULTIPLE_DB:    
-            await Media2.collection.drop()
+        from database.ia_filterdb import _MEDIA_MODELS
+        for model in _MEDIA_MODELS:
+            await model.collection.drop()
         await query.answer("Eᴠᴇʀʏᴛʜɪɴɢ's Gᴏɴᴇ")
         await query.message.edit('ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ᴅᴇʟᴇᴛᴇᴅ ᴀʟʟ ɪɴᴅᴇxᴇᴅ ꜰɪʟᴇꜱ ✅')
 
