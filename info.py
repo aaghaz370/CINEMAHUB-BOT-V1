@@ -208,46 +208,31 @@ BAD_WORDS = {
     "tg",
     "original"
 } # Set of bad words to filter out
-   
 
 # ============================
 # Server & Web Configuration
 # ============================
-
 PORT = int(environ.get("PORT", "8080"))
 NO_PORT = bool(environ.get('NO_PORT', False))
 APP_NAME = environ.get('APP_NAME')
 ON_HEROKU = is_enabled(os.environ.get('ON_HEROKU', "False"), False)
 BIND_ADRESS = str(getenv('WEB_SERVER_BIND_ADDRESS', '0.0.0.0'))
-RENDER_EXTERNAL_URL = getenv('RENDER_EXTERNAL_URL') # Auto-provided by Render if configured
+RENDER_EXTERNAL_URL = getenv('RENDER_EXTERNAL_URL')
 
-# Logic: Priority 1: FQDN, Priority 2: RENDER_EXTERNAL_URL, Priority 3: Heroku/Local
-if getenv('FQDN'):
-    FQDN = getenv('FQDN')
-elif RENDER_EXTERNAL_URL:
-    FQDN = RENDER_EXTERNAL_URL.replace("https://", "").replace("http://", "").rstrip("/")
-elif ON_HEROKU and APP_NAME:
-    FQDN = f"{APP_NAME}.herokuapp.com"
-else:
-    FQDN = BIND_ADRESS
-
-HAS_SSL = is_enabled(getenv('HAS_SSL', 'True'), True)
-if HAS_SSL:
-    URL = "https://{}/".format(FQDN)
-else:
-    if NO_PORT:
-        URL = "http://{}/".format(FQDN)
-    else:
-        URL = "http://{}:{}/".format(FQDN, PORT)
-
-# Fallback handling: If URL looks like an IP but RENDER_EXTERNAL_URL exists, prefer Render
-if (not FQDN or FQDN == BIND_ADRESS) and RENDER_EXTERNAL_URL:
-    URL = RENDER_EXTERNAL_URL if RENDER_EXTERNAL_URL.endswith("/") else RENDER_EXTERNAL_URL + "/"
-    FQDN = URL.replace("https://", "").replace("http://", "").rstrip("/")
-
-# Final Master Override: If user sets URL env var, use it.
+# Priority order: 1. Manual URL, 2. Dashboard FQDN, 3. Render Auto-URL, 4. Local IP
 if getenv('URL'):
     URL = getenv('URL') if getenv('URL').endswith("/") else getenv('URL') + "/"
+    FQDN = URL.replace("https://", "").replace("http://", "").split("/")[0]
+elif getenv('FQDN'):
+    FQDN = getenv('FQDN')
+    HAS_SSL = is_enabled(getenv('HAS_SSL', 'True'), True)
+    URL = f"https://{FQDN}/" if HAS_SSL else f"http://{FQDN}:{PORT}/"
+elif RENDER_EXTERNAL_URL:
+    URL = RENDER_EXTERNAL_URL if RENDER_EXTERNAL_URL.endswith("/") else RENDER_EXTERNAL_URL + "/"
+    FQDN = URL.replace("https://", "").replace("http://", "").split("/")[0]
+else:
+    FQDN = BIND_ADRESS
+    URL = f"http://{FQDN}:{PORT}/"
 
 SLEEP_THRESHOLD = int(environ.get('SLEEP_THRESHOLD', '60'))
 WORKERS = int(environ.get('WORKERS', '4'))
