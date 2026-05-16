@@ -440,24 +440,126 @@ async def index_files_to_db(lst_msg_id, chat, msg, bot, skip_from=0, register_au
 
 
 # ──────────────────────────────────────────────────────────────────
-# AUTO-INDEX BACKGROUND LOOP
-# Runs every 30 minutes, checks all registered channels for new msgs
+# REAL-TIME AUTO-INDEX: Triggers immediately when a new file is
+# posted to any registered channel. This is the PRIMARY mechanism.
+# Bots can listen to channel posts via on_message — no GetHistory needed.
+# ──────────────────────────────────────────────────────────────────
+@Client.on_message(filters.channel & (filters.video | filters.document | filters.audio))
+async def realtime_channel_indexer(bot, message):
+    """
+    Real-time indexing: fires immediately when a media message is posted
+    to any channel the bot is a member of.
+    Only indexes if the channel is in the auto-index registry.
+    """
+    try:
+        from database.users_chats_db import db as user_db
+        auto_enabled = await user_db.get_bot_setting(bot.me.id, "AUTO_INDEX", True)
+        if not auto_enabled:
+            return
+
+        chat_id = message.chat.id
+
+        # Only index channels that are registered
+        if chat_id not in _AUTO_INDEX_REGISTRY:
+            return
+
+        if not message.media:
+            return
+        if message.media not in [enums.MessageMediaType.VIDEO, enums.MessageMediaType.AUDIO, enums.MessageMediaType.DOCUMENT]:
+            return
+
+        media = getattr(message, message.media.value, None)
+        if not media:
+            return
+
+        media.file_type = message.media.value
+        media.caption = message.caption
+
+        ok, code = await save_file(media)
+        if ok:
+            # Update last indexed ID in registry
+            _AUTO_INDEX_REGISTRY[chat_id] = message.id
+            await _save_auto_registry(bot)
+            logger.info(f"[AUTO-INDEX][RT] Saved '{media.file_name}' (msg {message.id}) from channel {chat_id}")
+        elif code == 0:
+            # Duplicate — still update the ID so we don't re-check old messages
+            if message.id > _AUTO_INDEX_REGISTRY.get(chat_id, 0):
+                _AUTO_INDEX_REGISTRY[chat_id] = message.id
+                await _save_auto_registry(bot)
+        
+    except Exception as e:
+        logger.error(f"[AUTO-INDEX][RT] Error: {e}")
+
+
+# ──────────────────────────────────────────────────────────────────
+# BOT-SAFE LATEST MESSAGE PROBE
+# Bots cannot use GetHistory, but CAN use GetMessages with known IDs.
+# This probes forward in small batches to find how far the channel has grown.
+# ──────────────────────────────────────────────────────────────────
+async def _probe_latest_msg_id(bot, chat_id: int, last_known_id: int, max_probe: int = 3000) -> int:
+    """
+    Bot-safe way to find the latest message ID.
+    Probes forward from last_known_id using get_messages() (which IS allowed for bots).
+    Returns the highest message ID found that is not empty.
+    """
+    probe_batch = 200
+    current = last_known_id
+    latest_found = last_known_id
+    ceiling = last_known_id + max_probe
+
+    while current < ceiling:
+        end = min(current + probe_batch, ceiling)
+        ids = list(range(current + 1, end + 1))
+        try:
+            msgs = await bot.get_messages(chat_id, ids)
+            if not isinstance(msgs, list):
+                msgs = [msgs]
+            
+            found_any_real = False
+            for m in msgs:
+                if not m.empty:
+                    latest_found = m.id
+                    found_any_real = True
+            
+            if not found_any_real:
+                # No real messages in this range — we've passed the end of the channel
+                break
+            
+            current = end
+        except FloodWait as fw:
+            await asyncio.sleep(fw.value + 2)
+        except Exception:
+            break
+
+    return latest_found
+
+
+# ──────────────────────────────────────────────────────────────────
+# AUTO-INDEX BACKGROUND LOOP (CATCHUP)
+# Runs every 30 minutes to catch messages missed while bot was offline
+# or while the real-time handler wasn't triggered.
+# Uses bot-safe probing — NO GetHistory.
 # ──────────────────────────────────────────────────────────────────
 async def auto_index_loop(bot):
     """
-    Background task: every 30 minutes, check all registered channels
-    for new messages and index them silently into the DB.
+    Catchup task: every 30 minutes, probe registered channels for
+    any messages missed since last indexed ID, and index them.
+    The real-time handler covers live posts; this covers gaps.
     """
-    await asyncio.sleep(60)  # Wait 60s after startup before first check
+    await asyncio.sleep(90)  # Wait 90s after startup before first check
     await _load_auto_registry(bot)
 
-    # Also add channels from info.py CHANNELS list to auto-registry
+    # Register channels from info.py CHANNELS list into the registry
     for ch in CHANNELS:
-        ch_int = int(ch) if str(ch).lstrip('-').isnumeric() else ch
-        if ch_int not in _AUTO_INDEX_REGISTRY:
-            _AUTO_INDEX_REGISTRY[ch_int] = 0  # Start from beginning if not tracked
+        try:
+            ch_int = int(ch) if str(ch).lstrip('-').isnumeric() else ch
+            if ch_int not in _AUTO_INDEX_REGISTRY:
+                _AUTO_INDEX_REGISTRY[ch_int] = 0
+                logger.info(f"[AUTO-INDEX] Registered CHANNELS config entry: {ch_int}")
+        except Exception:
+            pass
 
-    logger.info(f"[AUTO-INDEX] Starting auto-index loop with {len(_AUTO_INDEX_REGISTRY)} channels.")
+    logger.info(f"[AUTO-INDEX] Catchup loop started. Monitoring {len(_AUTO_INDEX_REGISTRY)} channels.")
 
     while True:
         try:
@@ -470,44 +572,31 @@ async def auto_index_loop(bot):
                         if temp.CANCEL:
                             break
 
-                        # Get latest message ID in channel
-                        chat_info = await bot.get_chat(chat_id)
-                        latest_msg_id = None
-
-                        # Use iter_messages to get the latest message ID
-                        async for msg in bot.get_chat_history(chat_id, limit=1):
-                            latest_msg_id = msg.id
-                            break
-
-                        if not latest_msg_id:
-                            continue
+                        # ✅ Bot-safe: probe forward with get_messages() instead of GetHistory
+                        latest_msg_id = await _probe_latest_msg_id(bot, chat_id, last_indexed_id)
 
                         if latest_msg_id <= last_indexed_id:
-                            logger.info(f"[AUTO-INDEX] {chat_id}: No new messages (last={last_indexed_id}, latest={latest_msg_id})")
+                            logger.info(f"[AUTO-INDEX] {chat_id}: Up to date (last={last_indexed_id})")
+                            await asyncio.sleep(2)
                             continue
 
                         new_count = latest_msg_id - last_indexed_id
-                        logger.info(f"[AUTO-INDEX] {chat_id}: {new_count} new messages to index (from {last_indexed_id} to {latest_msg_id})")
+                        logger.info(f"[AUTO-INDEX] {chat_id}: {new_count} missed messages detected ({last_indexed_id} → {latest_msg_id})")
 
-                        # Send a log notification to LOG_CHANNEL
+                        # Notify log channel
                         try:
-                            await bot.send_message(
+                            dummy_msg = await bot.send_message(
                                 LOG_CHANNEL,
-                                f"🔄 **Auto-Indexing Started**\n"
+                                f"🔄 **Auto-Index Catchup**\n"
                                 f"📢 Channel: `{chat_id}`\n"
-                                f"📨 New Messages: `{new_count}`\n"
-                                f"▶️ From msg `{last_indexed_id}` → `{latest_msg_id}`"
+                                f"📨 Missed: `{new_count}` messages\n"
+                                f"▶️ From `{last_indexed_id}` → `{latest_msg_id}`"
                             )
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.warning(f"Could not send log message: {e}")
+                            continue
 
-                        # Create a dummy message for silent indexing
-                        dummy_msg = await bot.send_message(
-                            LOG_CHANNEL,
-                            f"⏳ Auto-indexing `{chat_id}`..."
-                        )
-
-                        # Index only the NEW messages (from last_indexed_id onwards)
+                        # Index the missed messages
                         new_last_id = await index_files_to_db(
                             lst_msg_id=latest_msg_id,
                             chat=chat_id,
@@ -518,25 +607,25 @@ async def auto_index_loop(bot):
                             silent=False
                         )
 
-                        # Update registry with new last ID
-                        if new_last_id:
+                        if new_last_id and new_last_id > last_indexed_id:
                             _AUTO_INDEX_REGISTRY[chat_id] = new_last_id
                             await _save_auto_registry(bot)
+                            logger.info(f"[AUTO-INDEX] {chat_id}: Registry updated to msg {new_last_id}")
 
-                        # Small delay between channels to avoid flood
-                        await asyncio.sleep(10)
+                        await asyncio.sleep(10)  # Small gap between channels
 
                     except FloodWait as fw:
-                        logger.warning(f"[AUTO-INDEX] FloodWait {fw.value}s")
+                        logger.warning(f"[AUTO-INDEX] FloodWait {fw.value}s for {chat_id}")
                         await asyncio.sleep(fw.value + 5)
                     except Exception as e:
-                        logger.error(f"[AUTO-INDEX] Error for channel {chat_id}: {e}")
+                        logger.error(f"[AUTO-INDEX] Catchup error for {chat_id}: {e}")
+                        await asyncio.sleep(5)
                         continue
 
         except Exception as e:
-            logger.error(f"[AUTO-INDEX] Loop error: {e}")
+            logger.error(f"[AUTO-INDEX] Outer loop error: {e}")
 
-        # Wait 30 minutes before next check
+        # Wait 30 minutes before next catchup cycle
         await asyncio.sleep(30 * 60)
 
 
